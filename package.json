@@ -22,5 +22,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Hannu Kröger <hkroger@gmail.com>"
+  "author": "Hannu Kröger <hkroger@gmail.com>",
+  "dependencies" : { 
+    "request": "^2.75.0"
+  }
 }
