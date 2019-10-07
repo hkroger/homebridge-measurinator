@@ -50,7 +50,7 @@ MeasurinatorAccessory.prototype = {
 function Measurinator(log, config) {
   this.log = log;
   this.client_id = config['client'];
-  this.measurinator_root = config["measurinator_url"] || "http://hkroger.info/thermometer";
+  this.measurinator_root = config["measurinator_url"] || "http://measurinator.com/thermometer";
 }
 
 Measurinator.prototype = {
