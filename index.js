@@ -9,19 +9,23 @@ module.exports = function(homebridge) {
   homebridge.registerAccessory("homebridge-measurinator", "MeasurinatorAccessory", MeasurinatorAccessory);
 }
 
-function MeasurinatorAccessory(log, name, id, temperatureService) {
+// Lingo is a bit wrong. Here quantity and unit are synonyms for unit (temperature, humidity, etc.)
+function MeasurinatorAccessory(log, name, unit, id, measurementService) {
   this.log = log;
   this.name = name;
+  this.uuid_base = id.toString();
   this.id = id.toString();
-  this.temperatureService = temperatureService;
+  this.log("name: %s, id: %s", this.name, this.id);
+  this.measurementService = measurementService;
+  this.unit = unit;
 }
 
 MeasurinatorAccessory.prototype = {
 
-  getCurrentTemperature: function (callback) {
+  getCurrentMeasurement: function (callback) {
     var that = this;
-    that.log("getting CurrentTemperature");
-    that.temperatureService(callback, this.id);
+    that.log("getting current measurement");
+    that.measurementService(callback, this.id);
   },
 
   // Get Services
@@ -33,34 +37,51 @@ MeasurinatorAccessory.prototype = {
 		.setCharacteristic(Characteristic.Model, "T-850")
 		.setCharacteristic(Characteristic.SerialNumber, this.id)
 
-	var temperatureService = new Service.TemperatureSensor();
 
-    temperatureService
-    	.getCharacteristic(Characteristic.CurrentTemperature)
-    	.setProps({
+    // Default is temperature
+	var measurementService = null;
+
+	if (this.unit === "temperature") {
+      measurementService = new Service.TemperatureSensor();
+      measurementService
+          .getCharacteristic(Characteristic.CurrentTemperature)
+          .setProps({
             minValue: -100,
             maxValue: 150
-        })
-    	.on('get', this.getCurrentTemperature.bind(this));
+          })
+          .on('get', this.getCurrentMeasurement.bind(this));
+    }
 
-	return [informationService, temperatureService];
+    if (this.unit === "humidity") {
+      measurementService = new Service.HumiditySensor();
+      measurementService
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .setProps({
+            minValue: 0,
+            maxValue: 100
+          })
+          .on('get', this.getCurrentMeasurement.bind(this));
+    }
+
+	return [informationService, measurementService];
   }
 }
 
 function Measurinator(log, config) {
   this.log = log;
   this.client_id = config['client'];
-  this.measurinator_root = config["measurinator_url"] || "http://measurinator.com/thermometer";
+  this.old_measurinator_api = "http://measurinator.com/thermometer";
+  this.new_measurinator_api = "http://api.measurinator.com";
 }
 
 Measurinator.prototype = {
-  getCurrentTemperature: function(callback, id) {
+  getCurrentMeasurement: function(callback, id) {
     var that = this;
     request.get({
-      url: this.measurinator_root+"/api/measurements/?client_id=" + this.client_id + "&location_id="+id,
+      url: this.old_measurinator_api+"/api/measurements/?client_id=" + this.client_id + "&location_id="+id,
       json: true
     }, function(err, response, json) {
-      if (!err && response.statusCode == 200) {
+      if (!err && response.statusCode === 200) {
         callback(null, json.current);
       } else {
         that.log("There was a problem");
@@ -71,16 +92,17 @@ Measurinator.prototype = {
   accessories: function(callback) {
     this.log("Fetching measurement locations...");
 
+    // that = this needed for scopes later where this is not available or initialized wrong
     var that = this;
     var foundAccessories = [];
 
     request.get({
-      url: this.measurinator_root+"/api/locations/?client_id=" + this.client_id,
+      url: this.new_measurinator_api+"/locations/?client_id=" + this.client_id,
       json: true
     }, function(err, response, json) {
-      if (!err && response.statusCode == 200) {
+      if (!err && response.statusCode === 200) {
         json.map(function(s) {
-            accessory = new MeasurinatorAccessory(that.log, s.description, s.id, that.getCurrentTemperature.bind(that));
+            accessory = new MeasurinatorAccessory(that.log, s.description, s.quantity, s.id, that.getCurrentMeasurement.bind(that));
             foundAccessories.push(accessory);
         })
         callback(foundAccessories);

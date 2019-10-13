@@ -5,8 +5,8 @@
         "port": 51826,
         "pin": "031-45-154"
     },
-    
-    "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
+
+    "description": "Measurinator",
 
     "accessories": [
     ],
@@ -15,7 +15,7 @@
         {
             "platform" : "Measurinator",
             "name" : "Measurinator",
-	    "client": "123123123-1223-1234-1234-123412341234"
+            "client": "123123123-1223-1234-1234-123412341234"
         }
     ]
 }
